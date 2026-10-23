@@ -6,9 +6,16 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "test": "node --test"
+    "test": "node --test",
+    "test:security": "node scripts/check-security.mjs",
+    "test:sharing-browser": "node scripts/check-sharing-browser.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "playwright": "^1.64.1",
     "vite": "^6.4.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0"
   }
 }

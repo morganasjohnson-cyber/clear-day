@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-`npm test` checks task extraction and calendar export; `npm run build` creates a static production site in `dist/`. Deploy that directory to any static host over HTTPS. No backend, API key, or account is required.
+`npm test` checks task extraction and calendar export; `npm run build` creates a static production site in `dist/`. Deploy that directory to any static host over HTTPS. The device-only planner needs no account. Optional cross-device sharing uses Supabase; see [sharing setup](supabase/README.md).
 
 ## Using your day
 
@@ -24,7 +24,7 @@ npm run dev
 
 ## Data and privacy
 
-Plans live in this browser's localStorage and persist across refreshes. They are not synced between devices or browsers. Clearing site data, using private browsing, or changing the site address can remove or hide saved plans. Use **Export backup** regularly and **Restore backup** to recover or transfer them. Restoration downloads a copy of current data before replacing matching dates. Storage failures display a warning. No thoughts are sent to an AI service.
+Plans live in this browser's localStorage and persist across refreshes. They stay device-only unless you connect optional sharing. Click **Share across devices** to sign in once the Supabase connection is configured. Signed-in account plans are cached separately by user, then synchronized while the app is open. Use the same account on Mac and phone. Existing device-only plans remain separate until you explicitly copy them into the account; that action downloads a backup first. Concurrent edits pause for a choice instead of silently overwriting either copy. See [sharing setup and limitations](supabase/README.md). Clearing site data, using private browsing, or changing the site address can remove or hide saved plans. Use **Export backup** regularly and **Restore backup** to recover or transfer them. Restoration downloads a copy of current data before replacing matching dates. Storage failures display a warning. No thoughts are sent to an AI service. When signed in, your account plans are sent to your configured Supabase project; database row-level security must be installed to protect them.
 
 ## Validation
 

@@ -1,4 +1,5 @@
 import "./style.css";
+import { createSharing } from "./sharing.js";
 import { dateKey, organize, calendar } from "./plan.js";
 const key = "clear-day-v1";
 let state = { days: {} },
@@ -26,10 +27,23 @@ const esc = (s) =>
       ],
   );
 const plan = () => (state.days[day] ??= { text: "", tasks: [], dumps: [] });
+const sharing = createSharing({
+  getState: () => state,
+  setState: (next) => {
+    state = next;
+    saveError = "";
+    unreadable = null;
+  },
+  render,
+  modal,
+  download,
+  guestKey: key,
+});
 function save() {
   if (unreadable !== null) return;
   try {
-    localStorage.setItem(key, JSON.stringify(state));
+    if (sharing.account) sharing.changed(state);
+    else localStorage.setItem(key, JSON.stringify(state));
     saveError = "";
   } catch {
     saveError =
@@ -50,7 +64,7 @@ function render() {
     done = p.tasks.filter((t) => t.done),
     pct = p.tasks.length ? Math.round((done.length / p.tasks.length) * 100) : 0;
   $("#app").innerHTML =
-    `<aside><a class="brand" href="#">🍀 Clear Day<span>A LITTLE SPACE FOR YOU</span></a><nav><button class="${tab === "plan" ? "active" : ""}" data-tab="plan">◫ <span>My day</span></button><button class="${tab === "history" ? "active" : ""}" data-tab="history">◷ <span>History</span></button></nav><div class="aside-bottom"><p>Clear your mind.<br>Organize your day.<br><em>Enjoy your life.</em></p><button id="backup">↓ Export backup</button><button id="restore">↑ Restore backup</button><input id="restore-file" type="file" accept="application/json,.json" hidden></div></aside><main><header><div class="eyebrow">YOUR DAY, A LITTLE LIGHTER</div><div class="top"><div><h1>${tab === "history" ? "Your days, remembered." : day === dateKey() ? "A fresh start awaits." : "Make room for a clear day."}</h1><p>One thought, one task, one small win at a time.</p></div><div class="date"><label for="day">YOUR DAILY PLAN</label><input id="day" type="date" value="${day}" required></div></div></header><div id="save" role="status">${esc(saveError || "✓ Saved on this device")}</div>${
+    `<aside><a class="brand" href="#">🍀 Clear Day<span>A LITTLE SPACE FOR YOU</span></a><nav><button class="${tab === "plan" ? "active" : ""}" data-tab="plan">◫ <span>My day</span></button><button class="${tab === "history" ? "active" : ""}" data-tab="history">◷ <span>History</span></button></nav><div class="aside-bottom"><p>Clear your mind.<br>Organize your day.<br><em>Enjoy your life.</em></p><button id="backup">↓ Export backup</button><button id="restore">↑ Restore backup</button><input id="restore-file" type="file" accept="application/json,.json" hidden></div></aside><main><header><div class="eyebrow">YOUR DAY, A LITTLE LIGHTER</div><div class="top"><div><h1>${tab === "history" ? "Your days, remembered." : day === dateKey() ? "A fresh start awaits." : "Make room for a clear day."}</h1><p>One thought, one task, one small win at a time.</p></div><div class="date"><label for="day">YOUR DAILY PLAN</label><input id="day" type="date" value="${day}" required></div></div></header>${sharing.markup()}<div id="save" role="status">${esc(saveError || "✓ Saved on this device")}</div>${
       tab === "history"
         ? `<section class="card"><h2>A little progress, every day</h2><p>Your plans and completed tasks stay here.</p>${Object.keys(
             state.days,
@@ -80,6 +94,7 @@ function render() {
               "",
             )}</div><section class="card completed"><details ${done.length ? "open" : ""}><summary>✓ Completed <span class="count">${done.length}</span></summary>${done.map(taskHTML).join("") || "<p>Small wins are on their way.</p>"}</details></section><footer><p>Enough for today is enough. <span>🍀</span></p><button id="end">☾ End My Day</button></footer>`
     }</main><dialog id="modal"></dialog>`;
+  sharing.bind();
   $("#day").onchange = (e) => {
     if (e.target.value) {
       day = e.target.value;
@@ -241,14 +256,26 @@ function edit(existing, exporting = false) {
 }
 function bulkExport() {
   const tasks = plan().tasks;
-  if (!tasks.length) { notice("Add or organize a few activities first, then export them together."); return; }
+  if (!tasks.length) {
+    notice(
+      "Add or organize a few activities first, then export them together.",
+    );
+    return;
+  }
   modal(`<form id="bulk-form"><div class="section-head"><h2>Export activities</h2><button type="button" data-close aria-label="Close">✕</button></div>
     <p>Select activities for this plan. Review their details, then download one calendar file.</p>
     <div class="bulk-controls"><button type="button" id="select-all">Select all</button><button type="button" id="select-none">Clear selection</button><span id="selected-count" role="status"></span></div>
-    <div class="bulk-list">${tasks.map((t, i) => `<fieldset class="bulk-activity" data-index="${i}"><legend><label class="bulk-select"><input type="checkbox" name="include" ${t.time && !t.done ? "checked" : ""}><span>${esc(t.title)}${t.done ? " · Completed" : ""}</span></label></legend>
+    <div class="bulk-list">${tasks
+      .map(
+        (
+          t,
+          i,
+        ) => `<fieldset class="bulk-activity" data-index="${i}"><legend><label class="bulk-select"><input type="checkbox" name="include" ${t.time && !t.done ? "checked" : ""}><span>${esc(t.title)}${t.done ? " · Completed" : ""}</span></label></legend>
       <label>Event title<input name="title" value="${esc(t.title)}" maxlength="1000"></label>
       <div class="form-row"><label>Date<input type="date" name="date" value="${esc(t.date)}"></label><label>Start time<input type="time" name="time" value="${esc(t.time)}"></label></div>
-      <label>Duration (minutes)<input type="number" name="duration" min="5" max="1440" step="1" value="${esc(t.duration)}"></label></fieldset>`).join("")}</div>
+      <label>Duration (minutes)<input type="number" name="duration" min="5" max="1440" step="1" value="${esc(t.duration)}"></label></fieldset>`,
+      )
+      .join("")}</div>
     <p class="hint">Times use your device’s time zone. Selected edits are saved to your plan when you download. Open the .ics file in Apple Calendar and confirm import; exporting does not add events automatically. Repeated imports may create duplicates.</p>
     <p id="bulk-error" role="alert"></p><div class="form-actions"><button class="primary" id="bulk-download" type="submit">Download calendar file</button></div></form>`);
   $("#modal").classList.add("bulk-modal");
@@ -258,28 +285,61 @@ function bulkExport() {
     for (const row of rows) {
       const selected = row.querySelector('[name="include"]').checked;
       if (selected) count++;
-      row.querySelectorAll('input:not([name="include"])').forEach(input => { input.disabled = !selected; input.required = selected; });
+      row.querySelectorAll('input:not([name="include"])').forEach((input) => {
+        input.disabled = !selected;
+        input.required = selected;
+      });
     }
     $("#selected-count").textContent = `${count} selected`;
     $("#bulk-download").disabled = count === 0;
   };
-  for (const row of rows) row.querySelector('[name="include"]').onchange = update;
-  for (const [selector, checked] of [["#select-all", true], ["#select-none", false]])
-    $(selector).onclick = () => { rows.forEach(row => row.querySelector('[name="include"]').checked = checked); update(); };
+  for (const row of rows)
+    row.querySelector('[name="include"]').onchange = update;
+  for (const [selector, checked] of [
+    ["#select-all", true],
+    ["#select-none", false],
+  ])
+    $(selector).onclick = () => {
+      rows.forEach(
+        (row) => (row.querySelector('[name="include"]').checked = checked),
+      );
+      update();
+    };
   update();
   $("#bulk-form").onsubmit = (e) => {
     e.preventDefault();
-    const selected = rows.filter(row => row.querySelector('[name="include"]').checked).map(row => {
-      const task = tasks[Number(row.dataset.index)];
-      return { ...task, ...Object.fromEntries(["title", "date", "time", "duration"].map(name => [name, row.querySelector(`[name="${name}"]`).value.trim()])) };
-    });
+    const selected = rows
+      .filter((row) => row.querySelector('[name="include"]').checked)
+      .map((row) => {
+        const task = tasks[Number(row.dataset.index)];
+        return {
+          ...task,
+          ...Object.fromEntries(
+            ["title", "date", "time", "duration"].map((name) => [
+              name,
+              row.querySelector(`[name="${name}"]`).value.trim(),
+            ]),
+          ),
+        };
+      });
     try {
       const content = calendar(selected);
       download(content, `clear-day-${day}.ics`, "text/calendar;charset=utf-8");
-      selected.forEach(updated => Object.assign(tasks.find(t => t.id === updated.id), updated));
-      save(); $("#modal").close(); render();
-      notice(`Downloaded ${selected.length} ${selected.length === 1 ? "activity" : "activities"} in one calendar file. Open it in Apple Calendar to review and import.`);
-    } catch (error) { $("#bulk-error").textContent = error.message; }
+      selected.forEach((updated) =>
+        Object.assign(
+          tasks.find((t) => t.id === updated.id),
+          updated,
+        ),
+      );
+      save();
+      $("#modal").close();
+      render();
+      notice(
+        `Downloaded ${selected.length} ${selected.length === 1 ? "activity" : "activities"} in one calendar file. Open it in Apple Calendar to review and import.`,
+      );
+    } catch (error) {
+      $("#bulk-error").textContent = error.message;
+    }
   };
 }
 function review() {
@@ -311,6 +371,7 @@ function review() {
     };
 }
 render();
+sharing.init();
 
 async function restore(e) {
   const file = e.target.files[0];

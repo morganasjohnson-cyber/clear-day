@@ -743,15 +743,119 @@ dialog label select {
   }
 }
 
-.plan-actions,.bulk-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-button:disabled{opacity:.5;cursor:not-allowed}
-.bulk-modal{max-width:700px}
-.bulk-controls{margin:16px 0}
-.bulk-controls button{font-size:12px}
-#selected-count{margin-left:auto;font-size:12px;color:#617c4b}
-.bulk-activity{border:1px solid #dce3d9;border-radius:10px;padding:8px 18px 18px;margin:18px 0;min-width:0}
-dialog .bulk-select{display:flex;align-items:center;gap:10px;margin:0;font-weight:600;overflow-wrap:anywhere}
-dialog .bulk-select input{width:18px;height:18px;margin:0;flex-shrink:0;accent-color:#668557}
-.bulk-activity input:disabled{opacity:.5}
-#bulk-error{color:#a04135;font-size:13px}
-@media(max-width:760px){.plan-heading{align-items:flex-start;gap:14px;flex-direction:column}.plan-actions{width:100%}.plan-actions button{flex:1}.bulk-activity{padding:8px 12px 15px}.bulk-controls{gap:6px}#selected-count{width:100%;margin:4px 0}}
+.plan-actions,
+.bulk-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.bulk-modal {
+  max-width: 700px;
+}
+.bulk-controls {
+  margin: 16px 0;
+}
+.bulk-controls button {
+  font-size: 12px;
+}
+#selected-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #617c4b;
+}
+.bulk-activity {
+  border: 1px solid #dce3d9;
+  border-radius: 10px;
+  padding: 8px 18px 18px;
+  margin: 18px 0;
+  min-width: 0;
+}
+dialog .bulk-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+dialog .bulk-select input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #668557;
+}
+.bulk-activity input:disabled {
+  opacity: 0.5;
+}
+#bulk-error {
+  color: #a04135;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .plan-heading {
+    align-items: flex-start;
+    gap: 14px;
+    flex-direction: column;
+  }
+  .plan-actions {
+    width: 100%;
+  }
+  .plan-actions button {
+    flex: 1;
+  }
+  .bulk-activity {
+    padding: 8px 12px 15px;
+  }
+  .bulk-controls {
+    gap: 6px;
+  }
+  #selected-count {
+    width: 100%;
+    margin: 4px 0;
+  }
+}
+
+.sharing-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  border-bottom: 1px solid #dce3d9;
+  padding: 0 0 14px;
+  margin: 16px 0 12px;
+}
+.sharing-bar span {
+  font-size: 12px;
+  color: #617c4b;
+}
+.sharing-bar button {
+  font-size: 12px;
+}
+.sharing-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+#auth-message,
+#account-message {
+  font-size: 13px;
+  white-space: pre-line;
+}
+@media (max-width: 760px) {
+  .sharing-bar {
+    align-items: flex-start;
+  }
+  .sharing-bar button {
+    padding: 8px 10px;
+    min-width: 130px;
+  }
+  .sharing-bar span {
+    font-size: 11px;
+  }
+}
