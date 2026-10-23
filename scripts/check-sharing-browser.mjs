@@ -130,6 +130,16 @@ await mac.evaluate(() => window.dispatchEvent(new Event("focus")));
 await mac.waitForFunction(
   () => document.querySelectorAll(".completed .task").length === 1,
 );
+// An iPhone error must offer a useful reason and recover after retry.
+await phone.route("**/rest/v1/clear_day_plans**", route => route.fulfill({status:403,json:{code:"42501",message:"permission denied"}}));
+await phone.evaluate(() => window.dispatchEvent(new Event("focus")));
+await phone.waitForFunction(() => document.querySelector("#sharing-status").textContent.includes("Sharing unavailable"));
+await phone.locator("#sharing-open").click();
+assert.match(await phone.locator("#sharing-problem").textContent(), /database permissions/);
+await phone.unroute("**/rest/v1/clear_day_plans**");
+await phone.locator("#sync-now").click();
+assert.equal(await phone.locator("#sharing-problem").textContent(), "");
+await phone.locator("[data-close]").click();
 // A remote change racing with a local draft must stop and offer recovery.
 await mac.locator("#dump").fill("Mac unsynced draft");
 await mac.locator("#dump").blur();

@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { PlanSync, supabaseStore } from "./sync.js";
+import { PlanSync, supabaseStore, sharingProblem } from "./sync.js";
 
 const html = (value) =>
   String(value).replace(
@@ -35,9 +35,12 @@ export function createSharing({
   };
   function updateStatus(next, error) {
     status = next;
-    detail = error?.message || "";
+    if (error) detail = sharingProblem(error);
+    else if (["synced", "local"].includes(next)) detail = "";
     const text = document.querySelector("#sharing-status");
     if (text) text.textContent = messages[status];
+    const problem = document.querySelector("#sharing-problem");
+    if (problem) problem.textContent = detail;
   }
   function show(content) {
     modal(content);
@@ -77,7 +80,8 @@ export function createSharing({
       updateStatus("pending");
       render();
       await engine.tick();
-    } catch {
+    } catch (error) {
+      detail = sharingProblem(error);
       // Preserve unreadable account caches rather than falling back to overwriting them.
       engine = null;
       user = null;
@@ -123,7 +127,8 @@ export function createSharing({
       if (error) throw error;
       initialized = true;
       await switchUser(data.session?.user ?? null);
-    } catch {
+    } catch (error) {
+      detail = sharingProblem(error);
       initialized = true;
       initializationError = true;
     }
@@ -137,7 +142,7 @@ export function createSharing({
     }
     if (!client || initializationError) {
       show(
-        `<h2>Share across devices</h2><p>Your plans are safe on this device. Automatic sharing needs a private storage connection, which isn’t set up yet.</p><p>We’ll connect your Supabase project before you need to sign in.</p><button data-close>Keep using Clear Day</button>`,
+        `<h2>Share across devices</h2><p>Your plans are safe on this device. ${initializationError ? html(detail) : "Automatic sharing needs a private storage connection, which isn’t set up yet."}</p><p>${initializationError ? "Reload this page to retry. Keep your saved browser data." : "We’ll connect your Supabase project before you need to sign in."}</p><button data-close>Keep using Clear Day</button>`,
       );
       return;
     }
@@ -150,7 +155,7 @@ export function createSharing({
       return;
     }
     show(
-      `<div class="section-head"><h2>Your shared plans</h2><button data-close aria-label="Close">✕</button></div><p>Signed in as <strong>${html(user.email)}</strong>.</p><p>${html(messages[status])}</p>${detail ? '<p class="hint">Check your connection and storage setup, then retry. Your pending changes stay on this device.</p>' : ""}<p class="hint">On your phone, open this same website and sign in with the same account. Updates are checked every few seconds while the app is open.</p><div class="sharing-actions"><button id="sync-now">Sync now</button><button id="migrate">Copy device plans to account</button><button id="signout">Sign out</button></div><p id="account-message" role="status"></p>`,
+      `<div class="section-head"><h2>Your shared plans</h2><button data-close aria-label="Close">✕</button></div><p>Signed in as <strong>${html(user.email)}</strong>.</p><p>${html(messages[status])}</p><p id="sharing-problem" class="hint" role="status">${html(detail)}</p><p class="hint">On your phone, open this same website and sign in with the same account. Updates are checked every few seconds while the app is open.</p><div class="sharing-actions"><button id="sync-now">Sync now</button><button id="migrate">Copy device plans to account</button><button id="signout">Sign out</button></div><p id="account-message" role="status"></p>`,
     );
     document.querySelector("#sync-now").onclick = async () => {
       document.querySelector("#modal").close();

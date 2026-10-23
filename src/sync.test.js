@@ -160,3 +160,13 @@ test("local caches are isolated by account and stopping prevents updates", async
   await a.sync.tick();
   assert.equal(f.remote, null);
 });
+
+test('sharing failures explain network, permissions, session, and storage problems safely', async()=>{
+ const {sharingProblem}=await import('./sync.js');
+ assert.match(sharingProblem({message:'Load failed'}),/internet connection/);
+ assert.match(sharingProblem({code:'42501',message:'denied'}),/permissions/);
+ assert.match(sharingProblem({message:'JWT expired'}),/sign-in session/);
+ assert.match(sharingProblem({name:'QuotaExceededError'}),/browser could not save/);
+ assert.match(sharingProblem({code:'PGRST205'}),/storage table/);
+ assert.ok(!sharingProblem({message:'raw secret payload'}).includes('raw secret payload'));
+});

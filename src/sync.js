@@ -134,3 +134,20 @@ export function supabaseStore(client, userId) {
     },
   };
 }
+
+// Show useful diagnostics without exposing request URLs, tokens, or server payloads.
+export function sharingProblem(error) {
+  const code = String(error?.code || '');
+  const message = String(error?.message || '');
+  if (/quota|storage|securityerror/i.test(message + ' ' + error?.name))
+    return 'This browser could not save the local copy. Check that website storage is allowed and space is available. Export a backup before changing browser settings.';
+  if (/fetch|network|load failed|offline|timeout/i.test(message))
+    return 'This device could not reach the sharing service. Check its internet connection, then tap Sync now to retry.';
+  if (/jwt|expired|session|refresh.?token/i.test(message) || code === 'PGRST301')
+    return 'Your sign-in session needs attention. Export a backup of any pending changes before signing out and signing back in with the same Clear Day account.';
+  if (code === '42501')
+    return 'The sharing service refused access to these plans. The database permissions need checking; your device copy has not been removed.';
+  if (['42P01','PGRST205','PGRST204'].includes(code))
+    return 'The sharing service could not find the expected storage table. Its setup needs checking.';
+  return 'The sharing service returned an unexpected error. Tap Sync now to retry and share the error reference if it continues.' + (/^[A-Z0-9_]{2,24}$/i.test(code) ? ` Reference: ${code}.` : '');
+}
