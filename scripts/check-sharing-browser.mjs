@@ -176,6 +176,7 @@ await mac.waitForFunction(
 assert.equal(await mac.locator(".task").count(), 2);
 assert.equal(await mac.locator(".completed .task").count(), 0);
 const local = await browser.newPage();
+await local.route("**/sync-config.json", r => r.fulfill({json:{url:"",publishableKey:""}}));
 await local.goto("http://localhost:5173");
 await local.locator("#sharing-open").click();
 assert.match(await local.locator("#modal").textContent(), /isn’t set up yet/);
