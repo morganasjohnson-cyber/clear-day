@@ -49,3 +49,29 @@ test("calendar exports a timed event with escaped title and duration", () => {
 });
 test("local date keys do not shift at midnight", () =>
   assert.equal(dateKey(new Date(2026, 9, 23, 0, 5)), "2026-10-23"));
+
+test("bulk calendar contains exactly the selected events in one calendar", () => {
+  const tasks = [
+    { id: "first", title: "Team review", date: "2026-10-23", time: "09:00", duration: 30 },
+    { id: "second", title: "Run 🍀", date: "2026-10-24", time: "17:00", duration: 60 },
+  ];
+  const text = calendar(tasks);
+  assert.equal((text.match(/BEGIN:VCALENDAR/g) || []).length, 1);
+  assert.equal((text.match(/END:VCALENDAR/g) || []).length, 1);
+  assert.equal((text.match(/BEGIN:VEVENT/g) || []).length, 2);
+  assert.match(text, /UID:first@clear-day.local/);
+  assert.match(text, /UID:second@clear-day.local/);
+  assert.match(text, /SUMMARY:Run 🍀/);
+  assert.equal((calendar([tasks[1]]).match(/BEGIN:VEVENT/g) || []).length, 1);
+  assert.throws(() => calendar([]), /Select/);
+  assert.throws(() => calendar([...tasks, { ...tasks[0], time: "" }]));
+  assert.throws(() => calendar([{ ...tasks[0], date: "2026-02-30" }]));
+  assert.throws(() => calendar([{ ...tasks[0], duration: 0 }]));
+});
+
+test("calendar folds long Unicode titles without breaking characters", () => {
+  const title = "🍀 A calm day, " .repeat(30);
+  const text = calendar({ id:"long", title, date:"2026-10-23", time:"09:00", duration:60 });
+  for (const line of text.split("\r\n")) assert.ok(new TextEncoder().encode(line).length <= 75);
+  assert.ok(text.replace(/\r\n /g, "").includes(`SUMMARY:${title.replace(/,/g, "\\,")}`));
+});

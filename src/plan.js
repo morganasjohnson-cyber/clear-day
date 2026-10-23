@@ -79,27 +79,33 @@ const escapeICS = (s) =>
     .replace(/\r\n|\r|\n/g, "\\n")
     .replace(/,/g, "\\,")
     .replace(/;/g, "\\;");
-export function calendar(task) {
-  const start = new Date(`${task.date}T${task.time}:00`);
-  if (!Number.isFinite(+start))
-    throw new Error("Choose a valid date and start time.");
-  const stamp = (d) =>
-    d
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d{3}/, "");
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Clear Day//EN",
-    "BEGIN:VEVENT",
-    `UID:${task.id}@clear-day.local`,
-    `DTSTAMP:${stamp(new Date())}`,
-    `DTSTART:${stamp(start)}`,
-    `DTEND:${stamp(new Date(+start + Number(task.duration) * 60000))}`,
-    `SUMMARY:${escapeICS(task.title)}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-    "",
-  ].join("\r\n");
+export function calendar(input) {
+  const tasks = Array.isArray(input) ? input : [input];
+  if (!tasks.length) throw new Error("Select at least one activity.");
+  const stamp = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const events = tasks.flatMap((task) => {
+    const start = new Date(`${task.date}T${task.time}:00`);
+    const duration = Number(task.duration);
+    if (!task.title?.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(task.date) ||
+        !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(task.time) ||
+        !Number.isFinite(+start) || dateKey(start) !== task.date ||
+        !Number.isInteger(duration) || duration < 5 || duration > 1440)
+      throw new Error("Each activity needs a title, valid date, start time, and duration (5–1440 minutes).");
+    return ["BEGIN:VEVENT", `UID:${task.id}@clear-day.local`,
+      `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`,
+      `DTEND:${stamp(new Date(+start + duration * 60000))}`,
+      `SUMMARY:${escapeICS(task.title)}`, "END:VEVENT"];
+  });
+  // Calendar content lines must stay within 75 UTF-8 octets.
+  const fold = (line) => {
+    let output = "", bytes = 0;
+    for (const char of line) {
+      const size = new TextEncoder().encode(char).length;
+      if (bytes + size > 75) { output += "\r\n "; bytes = 1; }
+      output += char; bytes += size;
+    }
+    return output;
+  };
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Clear Day//EN",
+    ...events, "END:VCALENDAR", ""].map(fold).join("\r\n");
 }

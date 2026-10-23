@@ -62,7 +62,7 @@ function render() {
                 `<button class="history" data-day="${d}"><strong>${new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</strong><span>${state.days[d].tasks.filter((t) => t.done).length} of ${state.days[d].tasks.length} completed →</span></button>`,
             )
             .join("")}</section>`
-        : `<section class="card dump"><div class="section-head"><div><span class="eyebrow">01 / MAKE SOME SPACE</span><h2>What’s on your mind?</h2></div><span class="leaf">✳</span></div><p>Let it all out. We’ll help you find a little order.</p><textarea id="dump" aria-label="Morning brain dump" placeholder="Finish the growth plan, call a friend, hairdresser at 15:00, go for a run…">${esc(p.text)}</textarea><div class="dump-footer"><small>No perfect words needed. Just start typing.</small><button class="primary" id="organize">🍀 Organize My Day <span>↗</span></button></div><small class="hint">Suggestions are made on your device. Review dates, categories and priorities.</small>${p.dumps.length ? `<details><summary>Original brain dumps (${p.dumps.length})</summary>${p.dumps.map((d) => `<p class="original">${esc(d.text)}</p>`).join("")}</details>` : ""}</section><section class="progress-card"><div class="progress-icon">☀</div><div><strong>You’re making room for what matters.</strong><p>${done.length} of ${p.tasks.length} tasks complete${pct === 100 && p.tasks.length ? " · Beautifully done!" : ""}</p></div><div class="progress-right"><strong>${pct}%</strong><progress value="${pct}" max="100">${pct}%</progress></div></section><div class="plan-heading"><div><span class="eyebrow">02 / ONE THING AT A TIME</span><h2>Your daily plan</h2>${p.carried ? `<small>${p.carried} unfinished tasks moved to a later plan.</small>` : ""}</div><button id="add">＋ Add task</button></div><div class="columns">${[
+        : `<section class="card dump"><div class="section-head"><div><span class="eyebrow">01 / MAKE SOME SPACE</span><h2>What’s on your mind?</h2></div><span class="leaf">✳</span></div><p>Let it all out. We’ll help you find a little order.</p><textarea id="dump" aria-label="Morning brain dump" placeholder="Finish the growth plan, call a friend, hairdresser at 15:00, go for a run…">${esc(p.text)}</textarea><div class="dump-footer"><small>No perfect words needed. Just start typing.</small><button class="primary" id="organize">🍀 Organize My Day <span>↗</span></button></div><small class="hint">Suggestions are made on your device. Review dates, categories and priorities.</small>${p.dumps.length ? `<details><summary>Original brain dumps (${p.dumps.length})</summary>${p.dumps.map((d) => `<p class="original">${esc(d.text)}</p>`).join("")}</details>` : ""}</section><section class="progress-card"><div class="progress-icon">☀</div><div><strong>You’re making room for what matters.</strong><p>${done.length} of ${p.tasks.length} tasks complete${pct === 100 && p.tasks.length ? " · Beautifully done!" : ""}</p></div><div class="progress-right"><strong>${pct}%</strong><progress value="${pct}" max="100">${pct}%</progress></div></section><div class="plan-heading"><div><span class="eyebrow">02 / ONE THING AT A TIME</span><h2>Your daily plan</h2>${p.carried ? `<small>${p.carried} unfinished tasks moved to a later plan.</small>` : ""}</div><div class="plan-actions"><button id="bulk-export">◷ Export activities</button><button id="add">＋ Add task</button></div></div><div class="columns">${[
             "Work",
             "Personal",
           ]
@@ -131,6 +131,7 @@ function render() {
     render();
   };
   $("#add").onclick = () => edit();
+  $("#bulk-export").onclick = bulkExport;
   $("#end").onclick = review;
   document.querySelectorAll("[data-check]").forEach(
     (b) =>
@@ -180,6 +181,7 @@ function taskHTML(t) {
 }
 function modal(content) {
   const d = $("#modal");
+  d.classList.remove("bulk-modal");
   d.innerHTML = content;
   d.showModal();
   d.querySelector("[data-close]").onclick = () => d.close();
@@ -236,6 +238,49 @@ function edit(existing, exporting = false) {
         render();
       }
     };
+}
+function bulkExport() {
+  const tasks = plan().tasks;
+  if (!tasks.length) { notice("Add or organize a few activities first, then export them together."); return; }
+  modal(`<form id="bulk-form"><div class="section-head"><h2>Export activities</h2><button type="button" data-close aria-label="Close">✕</button></div>
+    <p>Select activities for this plan. Review their details, then download one calendar file.</p>
+    <div class="bulk-controls"><button type="button" id="select-all">Select all</button><button type="button" id="select-none">Clear selection</button><span id="selected-count" role="status"></span></div>
+    <div class="bulk-list">${tasks.map((t, i) => `<fieldset class="bulk-activity" data-index="${i}"><legend><label class="bulk-select"><input type="checkbox" name="include" ${t.time && !t.done ? "checked" : ""}><span>${esc(t.title)}${t.done ? " · Completed" : ""}</span></label></legend>
+      <label>Event title<input name="title" value="${esc(t.title)}" maxlength="1000"></label>
+      <div class="form-row"><label>Date<input type="date" name="date" value="${esc(t.date)}"></label><label>Start time<input type="time" name="time" value="${esc(t.time)}"></label></div>
+      <label>Duration (minutes)<input type="number" name="duration" min="5" max="1440" step="1" value="${esc(t.duration)}"></label></fieldset>`).join("")}</div>
+    <p class="hint">Times use your device’s time zone. Selected edits are saved to your plan when you download. Open the .ics file in Apple Calendar and confirm import; exporting does not add events automatically. Repeated imports may create duplicates.</p>
+    <p id="bulk-error" role="alert"></p><div class="form-actions"><button class="primary" id="bulk-download" type="submit">Download calendar file</button></div></form>`);
+  $("#modal").classList.add("bulk-modal");
+  const rows = [...document.querySelectorAll(".bulk-activity")];
+  const update = () => {
+    let count = 0;
+    for (const row of rows) {
+      const selected = row.querySelector('[name="include"]').checked;
+      if (selected) count++;
+      row.querySelectorAll('input:not([name="include"])').forEach(input => { input.disabled = !selected; input.required = selected; });
+    }
+    $("#selected-count").textContent = `${count} selected`;
+    $("#bulk-download").disabled = count === 0;
+  };
+  for (const row of rows) row.querySelector('[name="include"]').onchange = update;
+  for (const [selector, checked] of [["#select-all", true], ["#select-none", false]])
+    $(selector).onclick = () => { rows.forEach(row => row.querySelector('[name="include"]').checked = checked); update(); };
+  update();
+  $("#bulk-form").onsubmit = (e) => {
+    e.preventDefault();
+    const selected = rows.filter(row => row.querySelector('[name="include"]').checked).map(row => {
+      const task = tasks[Number(row.dataset.index)];
+      return { ...task, ...Object.fromEntries(["title", "date", "time", "duration"].map(name => [name, row.querySelector(`[name="${name}"]`).value.trim()])) };
+    });
+    try {
+      const content = calendar(selected);
+      download(content, `clear-day-${day}.ics`, "text/calendar;charset=utf-8");
+      selected.forEach(updated => Object.assign(tasks.find(t => t.id === updated.id), updated));
+      save(); $("#modal").close(); render();
+      notice(`Downloaded ${selected.length} ${selected.length === 1 ? "activity" : "activities"} in one calendar file. Open it in Apple Calendar to review and import.`);
+    } catch (error) { $("#bulk-error").textContent = error.message; }
+  };
 }
 function review() {
   const p = plan(),
